@@ -1,8 +1,20 @@
 [package]
+edition = "2018"
 name = "rustide"
 version = "0.1.0"
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+cassowary = "0.3.0"
+clap = "3.0.0-beta.2"
+color-eyre = "0.5.11"
+eframe = "0.13.1"
+libc = "0.2.98"
+ropey = "1.3.1"
+serde_json = "1.0.65"
+
+[dependencies.serde] 
+version = "1.0.126"
+default-features = false
+features = ["derive"]
+
+[profile.dev]
+opt-level = 3
