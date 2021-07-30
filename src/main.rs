@@ -1,23 +1,21 @@
-mod app;
 mod alloc;
+mod app;
 mod interop;
 mod layout;
+mod ui;
 
-use crate::interop::RustideState;
 use crate::app::Rustide;
-use std::sync::mpsc::channel;
-use interop::RustideMessage;
-use interop::RustideRequest;
-use interop::RustideResponse;
-use interop::Send;
-use interop::Listen;
+use crate::interop::RustideState;
 use interop::Endpoint;
+use interop::Listen;
+use interop::RRequest;
+use interop::RResponse;
+use interop::RustideMessage;
+use interop::Send;
+use std::sync::mpsc::channel;
 
 // #[global_allocator]
 // pub static ALLOCATOR: alloc::Tracing = alloc::Tracing::new();
-
-
-
 
 use clap::Clap;
 
@@ -38,8 +36,8 @@ fn rustide_backend(path: String, mut channel: Endpoint) -> Result<()> {
     };
     // let mark = alloc::Event::Mark;
     // eprintln!("{}", serde_json::to_string(&mark).unwrap());
-    channel.send(RustideRequest::ImAlive);
-    channel.send(RustideRequest::Debug("This is a debug string.".to_string()));
+    channel.send(RRequest::ImAlive);
+    channel.send(RRequest::Debug("This is a debug string.".to_string()));
     let read_dir = std::fs::read_dir(path)?;
     for entry in read_dir {
         if let Ok(entry) = entry {
@@ -47,7 +45,7 @@ fn rustide_backend(path: String, mut channel: Endpoint) -> Result<()> {
         }
     }
     loop {
-        channel.send(RustideRequest::State(state.clone()));
+        channel.send(RRequest::State(state.clone()));
         state.age += 14;
         std::thread::sleep_ms(1000);
     }

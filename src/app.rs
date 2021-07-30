@@ -1,12 +1,11 @@
-use std::time::Instant;
 use crate::interop::Endpoint;
 use crate::interop::RustideState;
-use crate::interop::RustideMessage;
-use crate::interop::RustideRequest;
+use crate::ui::Chord;
 use eframe::{
     egui::{self},
     epi,
 };
+use std::time::Instant;
 
 trait WidgetAttr {
     const SENSE: egui::Sense;
@@ -28,23 +27,24 @@ impl egui::Widget for FileList<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.vertical(|ui| {
             for entry in self.list {
-                let label = egui::Label::new(entry).wrap(false).monospace().sense(egui::Sense::click());
+                let label = egui::Label::new(entry)
+                    .wrap(false)
+                    .monospace()
+                    .sense(egui::Sense::click());
                 let response = ui.add(label);
                 if response.clicked() {
                     println!("Clicked {}", entry);
                 }
             }
-        }).response
+        })
+        .response
     }
 }
-impl <'a> FileList<'a> {
+impl<'a> FileList<'a> {
     fn new(list: &'a [String]) -> Self {
-        Self {
-            list
-        }
+        Self { list }
     }
 }
-
 
 pub struct Rustide {
     pub link: Endpoint,
@@ -53,7 +53,6 @@ pub struct Rustide {
     pub curr: Instant,
     pub show_explorer: bool,
 }
-
 impl Rustide {
     pub fn new(link: Endpoint) -> Self {
         Self {
@@ -70,16 +69,18 @@ impl Rustide {
         }
     }
     fn listen(&mut self) {
+        use crate::interop::RRequest::*;
+        use crate::interop::RustideMessage::Request;
         if let Ok(msg) = self.link.1.try_recv() {
             println!("{:?}", msg);
             match msg {
-                RustideMessage::Request(RustideRequest::Debug(string)) => {
+                Request(Debug(string)) => {
                     self.debug_strs.push(string);
                 }
-                RustideMessage::Request(RustideRequest::State(state)) => {
+                Request(State(state)) => {
                     self.state = state;
                 }
-                RustideMessage::Request(req) => {}
+                Request(req) => {}
                 _ => {}
             }
         }
@@ -87,16 +88,11 @@ impl Rustide {
 
     fn handle_input(&mut self, ctx: &egui::CtxRef) {
         let input_state = ctx.input();
-        if input_state.key_pressed(egui::Key::E) && matches!(input_state.modifiers, egui::Modifiers {
-            alt: false,
-            command: true,
-            shift: true,
-            ..
-        }) {
+        let ctrl_shift_e = Chord::new().ctrl().shift().key(egui::Key::E);
+        if input_state.chord_pressed(ctrl_shift_e) {
             self.show_explorer = !self.show_explorer;
         }
     }
-
 }
 
 fn diff(prev: &RustideState, next: &RustideState) {
@@ -116,15 +112,14 @@ fn diff(prev: &RustideState, next: &RustideState) {
 }
 
 pub trait Chords {
-    fn chord_pressed(&self, desired_key: egui::Key, modifiers: egui::Modifiers) -> bool;
+    fn chord_pressed(&self, chord: Chord) -> bool;
 }
 
 impl Chords for egui::InputState {
-    fn chord_pressed(&self, desired_key: egui::Key, modifiers: egui::Modifiers) -> bool {
-        self.key_pressed(desired_key) && modifiers == self.modifiers
+    fn chord_pressed(&self, chord: Chord) -> bool {
+        chord.matches(self)
     }
 }
-
 
 impl epi::App for Rustide {
     fn name(&self) -> &str {
@@ -146,7 +141,6 @@ impl epi::App for Rustide {
             });
         });
 
-
         if self.show_explorer {
             egui::SidePanel::left("Explorer").show(ctx, |ui| {
                 ui.horizontal(|ui| {
@@ -157,9 +151,7 @@ impl epi::App for Rustide {
                 let file_list = FileList::new(&self.state.files);
                 ui.add(file_list);
             });
-
         }
-
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ctx.style_ui(ui);

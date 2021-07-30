@@ -11,22 +11,62 @@ pub struct RustideState {
 }
 
 #[derive(Debug)]
-pub enum RustideRequest {
+pub enum RRequest {
     Kill,
     ImAlive,
     Debug(String),
-    State(RustideState)
+    State(RustideState),
 }
 
 #[derive(Debug)]
-pub enum RustideResponse {
+pub enum RResponse {
     Ok,
 }
 
 #[derive(Debug)]
 pub enum RustideMessage {
-    Request(RustideRequest),
-    Response(RustideResponse),
+    Request(RRequest),
+    Response(RResponse),
+}
+
+impl From<RResponse> for RustideMessage {
+    fn from(v: RResponse) -> Self {
+        Self::Response(v)
+    }
+}
+
+impl From<RRequest> for RustideMessage {
+    fn from(v: RRequest) -> Self {
+        Self::Request(v)
+    }
+}
+
+impl RustideMessage {
+    /// Returns `true` if the rustide_message is [`Response`].
+    pub fn is_response(&self) -> bool {
+        matches!(self, Self::Response(..))
+    }
+
+    /// Returns `true` if the rustide_message is [`Request`].
+    pub fn is_request(&self) -> bool {
+        matches!(self, Self::Request(..))
+    }
+
+    pub fn as_response(&self) -> Option<&RResponse> {
+        if let Self::Response(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_request(&self) -> Option<&RRequest> {
+        if let Self::Request(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 pub struct Link {
     e1: (Sender<RustideMessage>, Receiver<RustideMessage>),
@@ -55,11 +95,6 @@ impl Listen for Endpoint {
 impl Send for Endpoint {
     fn send<M: Into<RustideMessage>>(&mut self, t: M) -> Option<()> {
         self.0.send(t.into()).ok()
-    }
-}
-impl Into<RustideMessage> for RustideRequest {
-    fn into(self) -> RustideMessage {
-        RustideMessage::Request(self)
     }
 }
 
